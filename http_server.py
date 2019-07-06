@@ -1,6 +1,8 @@
 import socket
 import sys
 import traceback
+import os.path
+import mimetypes
 
 def response_ok(body=b"This is a minimal response", mimetype=b"text/plain"):
     """
@@ -18,22 +20,26 @@ def response_ok(body=b"This is a minimal response", mimetype=b"text/plain"):
         <html><h1>Welcome:</h1></html>\r\n
         '''
     """
-
     # TODO: Implement response_ok
-    return b""
+    return b"\r\n".join([
+        b"HTTP/1.1 200 OK",
+        b"Content-Type: " + mimetype,
+        b"",
+        body
+    ])
 
 def response_method_not_allowed():
     """Returns a 405 Method Not Allowed response"""
 
     # TODO: Implement response_method_not_allowed
-    return b""
+    return b"HTTP/1.1 405 Method Not Allowed"
 
 
 def response_not_found():
     """Returns a 404 Not Found response"""
 
     # TODO: Implement response_not_found
-    return b""
+    return b"HTTP/1.1 404 Not Found"
 
 
 def parse_request(request):
@@ -45,7 +51,12 @@ def parse_request(request):
     """
 
     # TODO: implement parse_request
-    return ""
+    method, path, version = request.split("\r\n")[0].split(" ")
+
+    if method != "GET":
+        raise NotImplementedError
+
+    return path
 
 def response_path(path):
     """
@@ -74,9 +85,27 @@ def response_path(path):
         response_path('/a_page_that_doesnt_exist.html') -> Raises a NameError
 
     """
+    if path[0] == '/':
+        if len(path) > 1:
+            my_path = os.path.join('webroot', path[1:])
+        else:
+            my_path = 'webroot'
+    else:
+        my_path = os.path.join('webroot', path)
+
+    if os.path.isdir(my_path):
+        mime_type = b"text/plain"
+        content = "\r\n".join(os.listdir(my_path)).encode()
+
+    if os.path.isfile(my_path):
+        filename, extension = os.path.splitext(my_path)
+        mime_type = mimetypes.types_map[extension].encode()
+        content = open(my_path, 'rb')
 
     # TODO: Raise a NameError if the requested content is not present
     # under webroot.
+    if not os.path.exists(my_path):
+        raise NameError
 
     # TODO: Fill in the appropriate content and mime_type give the path.
     # See the assignment guidelines for help on "mapping mime-types", though
@@ -85,9 +114,7 @@ def response_path(path):
     # If the path is "make_time.py", then you may OPTIONALLY return the
     # result of executing `make_time.py`. But you need only return the
     # CONTENTS of `make_time.py`.
-    
-    content = b"not implemented"
-    mime_type = b"not implemented"
+
 
     return content, mime_type
 
